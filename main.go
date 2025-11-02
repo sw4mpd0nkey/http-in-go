@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"os"
@@ -8,14 +9,15 @@ import (
 
 func main() {
 
-	fmt.Print("I got the job")
-
 	fileName := "messages.txt"
+
 	file, err := os.Open(fileName)
 	if err != nil {
 		log.Fatal("error", "error", err)
 		panic(err)
 	}
+
+	str := ""
 
 	for {
 		data := make([]byte, 8)
@@ -24,7 +26,17 @@ func main() {
 			break
 		}
 
-		fmt.Printf("read: %s\n", string(data[:n]))
+		data = data[:n]
+		if i := bytes.IndexByte(data, '\n'); i != -1 {
+			str += string(data[:i])
+			data = data[i+1:]
+			fmt.Printf("read: %s\n", str)
+			str = ""
+		}
+		str += string(data)
+	}
+	if len(str) != 0 {
+		fmt.Printf("read: %s\n", str)
 	}
 
 }
