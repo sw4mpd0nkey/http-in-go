@@ -10,8 +10,8 @@ import (
 
 func main() {
 	fmt.Println("running udp sender")
-
-	sender, err := net.ResolveUDPAddr("udp", "localhost:42069")
+	dest := "localhost:42069"
+	sender, err := net.ResolveUDPAddr("udp", dest)
 	if err != nil {
 		log.Fatal("error", "error", err)
 		panic(err)
@@ -25,7 +25,7 @@ func main() {
 
 	defer conn.Close()
 
-	fmt.Printf("Sending UDP data to %s. Type the msg to send and hit enter when ready")
+	fmt.Printf("Sending UDP data to %s. Type the msg to send and hit enter when ready", dest)
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
