@@ -17,9 +17,9 @@ type RequestLine struct {
 	Method        string
 }
 
-var ERROR_MALFORMED_REQUEST_LINE = fmt.Errorf("malformed request-line")
-var ERR_UNSUPPORTED_HTTP_VERSION = fmt.Errorf("http version not supported")
-var INCOMPLETE_START_LINE = fmt.Errorf("incomplete start line")
+var ErrMalformedRequestLine = fmt.Errorf("malformed request-line")
+var ErrUnsupportedHttpVersion = fmt.Errorf("http version not supported")
+var ErrIncompleteStartLine = fmt.Errorf("incomplete start line")
 var SEPERATOR = "\r\n"
 
 func parseRequestLine(line string) (*RequestLine, string, error) {
@@ -33,12 +33,12 @@ func parseRequestLine(line string) (*RequestLine, string, error) {
 
 	parts := strings.Split(startLine, " ")
 	if len(parts) != 3 {
-		return nil, restOfMsg, ERROR_MALFORMED_REQUEST_LINE
+		return nil, restOfMsg, ErrMalformedRequestLine
 	}
 
 	httpParts := strings.Split(parts[2], "/")
 	if len(httpParts) != 2 || httpParts[0] != "HTTP" || httpParts[1] != "1.1" {
-		return nil, restOfMsg, ERROR_MALFORMED_REQUEST_LINE
+		return nil, restOfMsg, ErrMalformedRequestLine
 	}
 	requestline := &RequestLine{
 		Method:        parts[0],
