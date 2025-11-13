@@ -10,7 +10,7 @@ import (
 
 func main() {
 	fmt.Println("running udp sender")
-	dest := "localhost:42069"
+	dest := "127.0.0.1:42069"
 	sender, err := net.ResolveUDPAddr("udp", dest)
 	if err != nil {
 		log.Fatal("error", "error", err)

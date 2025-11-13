@@ -46,7 +46,6 @@ func main() {
 		PORT = 42069
 		TYPE = "tcp"
 	)
-	fmt.Println("starting server....")
 
 	listen, err := net.Listen(TYPE, ":42069")
 	if err != nil {
@@ -54,7 +53,6 @@ func main() {
 		panic(err)
 	}
 
-	//go func() {
 	defer listen.Close()
 
 	for {
@@ -65,10 +63,9 @@ func main() {
 		}
 
 		for line := range getLinesChannel(conn) {
-			fmt.Printf("read: %s\n", line)
+			fmt.Printf("%s\n", line)
 		}
 
 	}
-	//	}()
 
 }
