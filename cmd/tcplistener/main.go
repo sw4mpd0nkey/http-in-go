@@ -1,44 +1,12 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"log"
 	"net"
+
+	request "boot.swampdonkey.dev/internal/request"
 )
-
-func getLinesChannel(f io.ReadCloser) <-chan string {
-	ch := make(chan string)
-	str := ""
-
-	go func() {
-		defer f.Close()
-		defer close(ch)
-
-		for {
-			data := make([]byte, 8)
-			n, err := f.Read(data)
-			if err != nil {
-				break
-			}
-
-			data = data[:n]
-			if i := bytes.IndexByte(data, '\n'); i != -1 {
-				str += string(data[:i])
-				data = data[i+1:]
-				ch <- str
-				str = ""
-			}
-			str += string(data)
-		}
-		if len(str) != 0 {
-			ch <- str
-		}
-	}()
-
-	return ch
-}
 
 func main() {
 	const (
@@ -62,10 +30,17 @@ func main() {
 			panic(err)
 		}
 
-		for line := range getLinesChannel(conn) {
-			fmt.Printf("%s\n", line)
+		r, err := request.RequestFromReader(conn)
+		if err != nil {
+			log.Fatal("error", "error", err)
+			panic(err)
 		}
+		rl := r.RequestLine
 
+		fmt.Println("Request line:")
+		fmt.Println("- Method: " + rl.Method)
+		fmt.Println("- Target: " + rl.RequestTarget)
+		fmt.Println("- Version: " + rl.HttpVersion)
 	}
 
 }
