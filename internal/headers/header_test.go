@@ -16,15 +16,15 @@ func TestHeaderParse(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, headers)
-	assert.Equal(t, "localhost:42069", headers["Host"])
-	assert.Equal(t, "barbar", headers["FooFoo"])
-	assert.Equal(t, "", headers["missingkey"])
+	assert.Equal(t, "localhost:42069", headers.Get("HOST"))
+	assert.Equal(t, "barbar", headers.Get("FooFoo"))
+	assert.Equal(t, "", headers.Get("missingkey"))
 	assert.Equal(t, 46, n)
 	assert.False(t, done)
 
 	// Test: Invalid spacing header
 	headers = NewHeaders()
-	data = []byte("       Host : localhost:42069       \r\n\r\n")
+	data = []byte("H@st : localhost:42069       \r\n\r\n")
 	n, done, err = headers.Parse(data)
 
 	require.Error(t, err)
