@@ -6,94 +6,68 @@ import (
 	"strings"
 )
 
-func isToken(str []byte) bool {
+const crlf = "\r\n"
 
-	for _, ch := range str {
-		found := false
+type Headers map[string]string
 
-		if ch >= 'A' && ch <= 'Z' || ch >= 'a' && ch <= 'z' || ch >= '0' && ch <= '9' {
-			found = true
-		}
+func NewHeaders() Headers {
+	return map[string]string{}
+}
 
-		switch ch {
-		case '!', '#', '$', '%', '&', '\'', '*', '+', '-', '.', '^', '_', '`', '|', '~':
-			found = true
-		}
+func (h Headers) Parse(data []byte) (n int, done bool, err error) {
+	idx := bytes.Index(data, []byte(crlf))
+	if idx == -1 {
+		return 0, false, nil
+	}
+	if idx == 0 {
+		// the empty line
+		// headers are done, consume the CRLF
+		return 2, true, nil
+	}
 
-		if !found {
+	parts := bytes.SplitN(data[:idx], []byte(":"), 2)
+	if len(parts) != 2 {
+		return 0, false, fmt.Errorf("invalid header line: %s", data[:idx])
+	}
+	key := strings.ToLower(string(parts[0]))
+
+	if strings.ContainsAny(key, " \t") {
+		return 0, false, fmt.Errorf("invalid header name: %s", key)
+	}
+
+	value := bytes.TrimSpace(parts[1])
+	key = strings.TrimSpace(key)
+	if !validTokens([]byte(key)) {
+		return 0, false, fmt.Errorf("invalid header token found: %s", key)
+	}
+	h.Set(key, string(value))
+	return idx + 2, false, nil
+}
+
+func (h Headers) Set(key, value string) {
+	key = strings.ToLower(key)
+	v, ok := h[key]
+	if ok {
+		value = strings.Join([]string{
+			v,
+			value,
+		}, ", ")
+	}
+	h[key] = value
+}
+
+var tokenChars = []byte{'!', '#', '$', '%', '&', '\'', '*', '+', '-', '.', '^', '_', '`', '|', '~'}
+
+// validTokens checks if the data contains only valid tokens
+// or characters that are allowed in a token
+func validTokens(data []byte) bool {
+	for _, c := range data {
+		if !(c >= 'A' && c <= 'Z' ||
+			c >= 'a' && c <= 'z' ||
+			c >= '0' && c <= '9' ||
+			c == '-') {
 			return false
 		}
 	}
-
 	return true
-
-}
-
-type Headers struct {
-	headers map[string]string
-}
-
-var rn = []byte("\r\n")
-
-func NewHeaders() *Headers {
-	return &Headers{
-		headers: map[string]string{},
-	}
-}
-
-func (h *Headers) Get(name string) string {
-	return h.headers[strings.ToLower((name))]
-}
-
-func (h *Headers) Set(name, value string) {
-	h.headers[strings.ToLower((name))] = value
-}
-
-func parseHeader(fieldLine []byte) (string, string, error) {
-	parts := bytes.SplitN(fieldLine, []byte(":"), 2)
-	if len(parts) != 2 {
-		return "", "", fmt.Errorf("malformed field line")
-	}
-
-	name := parts[0]
-	value := bytes.TrimSpace(parts[1])
-
-	if bytes.HasSuffix(name, []byte(" ")) {
-		return "", "", fmt.Errorf("malformed field name")
-	}
-
-	return string(name), string(value), nil
-}
-
-func (h Headers) Parse(data []byte) (int, bool, error) {
-
-	read := 0
-	done := false
-	for {
-		idx := bytes.Index(data[read:], rn)
-		if idx == -1 {
-			break
-		}
-
-		if idx == 0 {
-			// empty header
-			done = true
-			read += len(rn)
-			break
-		}
-
-		name, value, err := parseHeader(data[read : read+idx])
-		if err != nil {
-			return 0, false, err
-		}
-
-		if !isToken([]byte(name)) {
-			return 0, false, fmt.Errorf("malformed header name")
-		}
-
-		read += idx + len(rn)
-		h.Set(name, value)
-
-	}
-	return read, done, nil
 }
