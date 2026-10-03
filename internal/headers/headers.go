@@ -14,6 +14,12 @@ func NewHeaders() Headers {
 	return map[string]string{}
 }
 
+func (h *Headers) ForEach(cb func(n, v string)) {
+	for n, v := range *h {
+		cb(n, v)
+	}
+}
+
 func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	idx := bytes.Index(data, []byte(crlf))
 	if idx == -1 {
