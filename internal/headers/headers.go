@@ -3,6 +3,7 @@ package headers
 import (
 	"bytes"
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -50,6 +51,11 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	return idx + 2, false, nil
 }
 
+func (h Headers) Get(name string) (string, bool) {
+	str, ok := h[strings.ToLower(name)]
+	return str, ok
+}
+
 func (h Headers) Set(key, value string) {
 	key = strings.ToLower(key)
 	v, ok := h[key]
@@ -71,7 +77,7 @@ func validTokens(data []byte) bool {
 		if !(c >= 'A' && c <= 'Z' ||
 			c >= 'a' && c <= 'z' ||
 			c >= '0' && c <= '9' ||
-			c == '-') {
+			c == '-' || slices.Contains(tokenChars, c)) {
 			return false
 		}
 	}

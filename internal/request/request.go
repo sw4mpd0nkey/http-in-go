@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"strconv"
 
 	"boot.swampdonkey.dev/internal/headers"
 )
@@ -12,6 +13,7 @@ const (
 	StateInit    parserState = "init"
 	StateDone    parserState = "done"
 	StateHeaders parserState = "headers"
+	StateBody    parserState = "body"
 	StateError   parserState = "error"
 )
 
@@ -25,6 +27,23 @@ type Request struct {
 	RequestLine RequestLine
 	Headers     headers.Headers
 	state       parserState
+	Body        string
+}
+
+func getInt(headers headers.Headers, name string, defaultValue int) int {
+	valueStr, exists := headers.Get(name)
+
+	if !exists {
+		return defaultValue
+	}
+
+	value, err := strconv.Atoi(valueStr)
+
+	if err != nil {
+		return defaultValue
+	}
+
+	return value
 }
 
 func (r *Request) parse(data []byte) (int, error) {
@@ -33,6 +52,9 @@ func (r *Request) parse(data []byte) (int, error) {
 outer:
 	for {
 		currentData := data[read:]
+		if len(currentData) == 0 {
+			break outer
+		}
 
 		switch r.state {
 
@@ -68,6 +90,21 @@ outer:
 			read += n
 
 			if done {
+				r.state = StateBody
+			}
+
+		case StateBody:
+			length := getInt(r.Headers, "content-length", 0)
+
+			if length == 0 {
+				r.state = StateDone
+			}
+
+			remaining := min(length-len(r.Body), len(currentData))
+			r.Body += string(currentData[:remaining])
+			read += remaining
+
+			if len(r.Body) == length {
 				r.state = StateDone
 			}
 
@@ -94,6 +131,7 @@ type RequestLine struct {
 	HttpVersion   string
 	RequestTarget string
 	Method        string
+	Body          string
 }
 
 type parserState string
@@ -102,6 +140,7 @@ func newRequest() *Request {
 	return &Request{
 		state:   StateInit,
 		Headers: headers.NewHeaders(),
+		Body:    "",
 	}
 }
 
