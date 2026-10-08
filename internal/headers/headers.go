@@ -65,6 +65,11 @@ func (h Headers) Set(key, value string) {
 			value,
 		}, ", ")
 	}
+
+}
+
+func (h Headers) Replace(key, value string) {
+	key = strings.ToLower(key)
 	h[key] = value
 }
 
