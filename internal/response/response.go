@@ -18,7 +18,24 @@ const (
 	ServerErrorResponse StatusCode = 500
 )
 
-func WriteStatusLine(w io.Writer, statusCode StatusCode) error {
+func GetDefaultHeaders(contentLen int) headers.Headers {
+	h := headers.NewHeaders()
+	h.Set("Content-Length", fmt.Sprintf("%d", contentLen))
+	h.Set("Connection", "close")
+	h.Set("Content-Type", "text/plain")
+
+	return h
+}
+
+type Writer struct {
+	writer io.Writer
+}
+
+func NewWriter(writer io.Writer) *Writer {
+	return &Writer{writer: writer}
+}
+
+func (w *Writer) WriteStatusLine(statusCode StatusCode) error {
 
 	statusLine := []byte{}
 
@@ -34,21 +51,12 @@ func WriteStatusLine(w io.Writer, statusCode StatusCode) error {
 		return fmt.Errorf("unrecognized error code")
 	}
 
-	_, err := w.Write(statusLine)
+	_, err := w.writer.Write(statusLine)
 
 	return err
 }
 
-func GetDefaultHeaders(contentLen int) headers.Headers {
-	h := headers.NewHeaders()
-	h.Set("Content-Length", fmt.Sprintf("%d", contentLen))
-	h.Set("Connection", "close")
-	h.Set("Content-Type", "text/plain")
-
-	return h
-}
-
-func WriteHeaders(w io.Writer, headers headers.Headers) error {
+func (w *Writer) WriteHeaders(headers headers.Headers) error {
 	b := []byte{}
 
 	headers.ForEach(func(n, v string) {
@@ -56,6 +64,12 @@ func WriteHeaders(w io.Writer, headers headers.Headers) error {
 	})
 	b = fmt.Append(b, "\r\n")
 
-	_, err := w.Write(b)
+	_, err := w.writer.Write(b)
 	return err
+}
+
+func (w *Writer) WriteBody(p []byte) (int, error) {
+	n, err := w.writer.Write(p)
+
+	return n, err
 }

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"io"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -14,28 +14,49 @@ import (
 
 const port = 42069
 
+func ReadFile(fileName string) []byte {
+
+	data, err := os.ReadFile("html/" + fileName)
+	if err != nil {
+		panic(err)
+	}
+
+	return data
+}
+
 func main() {
-	server, err := server.Serve(port, func(w io.Writer, req *request.Request) *server.HandlerError {
+
+	server, err := server.Serve(port, func(w *response.Writer, req *request.Request) *server.HandlerError {
+
+		h := response.GetDefaultHeaders(0)
+		body := ReadFile("200.html")
+		status := response.SuccessResponse
 
 		if req.RequestLine.RequestTarget == "/yourproblem" {
-			return &server.HandlerError{
-				StatusCode: response.ClientErrorResponse,
-				Msg:        "Your problem is not my problem\n",
-			}
+
+			body = ReadFile("400.html")
+			status = response.ClientErrorResponse
+
 		} else if req.RequestLine.RequestTarget == "/myproblem" {
-			return &server.HandlerError{
-				StatusCode: response.ServerErrorResponse,
-				Msg:        "Woopsie, my bad\n",
-			}
-		} else {
-			w.Write([]byte("All good, frfr\n"))
+
+			body = ReadFile("500.html")
+			status = response.ServerErrorResponse
+
 		}
+
+		w.WriteStatusLine(status)
+		h.Replace("Content-Length", fmt.Sprintf("%d", len(body)))
+		h.Replace("Content-Type", "text/html")
+		w.WriteHeaders(h)
+		w.WriteBody(body)
 
 		return nil
 	})
+
 	if err != nil {
 		log.Fatalf("Error starting server: %v", err)
 	}
+
 	defer server.Close()
 	log.Println("Server started on port", port)
 
