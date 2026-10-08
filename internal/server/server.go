@@ -5,17 +5,20 @@ import (
 	"io"
 	"log"
 	"net"
+
+	"boot.swampdonkey.dev/internal/response"
 )
 
 type Server struct {
 	closed bool
 }
 
-func runConnection(conn io.ReadWriteCloser) {
+func runConnection(s *Server, conn io.ReadWriteCloser) {
+	defer conn.Close()
+	headers := response.GetDefaultHeaders(0)
+	response.WriteStatusLine(conn, response.SuccessResponse)
+	response.WriteHeaders(conn, headers)
 
-	out := []byte("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nHello World!")
-	conn.Write(out)
-	conn.Close()
 }
 
 func runServer(s *Server, listener net.Listener) error {
@@ -26,7 +29,7 @@ func runServer(s *Server, listener net.Listener) error {
 			return err
 		}
 
-		go runConnection(conn)
+		go runConnection(s, conn)
 	}
 
 }
