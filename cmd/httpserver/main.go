@@ -68,12 +68,9 @@ func main() {
 					if err != nil {
 						break
 					}
-					// start by writing hex
-					w.WriteBody([]byte(fmt.Sprintf("%x\r\n", n)))
-					w.WriteBody(data[:n])
-					w.WriteBody([]byte("\r\n"))
+					w.WriteChunkedBody(data[:n])
 				}
-				w.WriteBody([]byte("0\r\n\r\n"))
+				w.WriteChunkedBodyDone()
 				return nil
 			}
 		}
