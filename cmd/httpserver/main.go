@@ -57,37 +57,49 @@ func main() {
 				status = response.ServerErrorResponse
 			} else {
 
+				// first write the status line
 				w.WriteStatusLine(response.SuccessResponse)
 
+				// next write the headers
 				h.Delete("Content-Length")
-				h.Set("Transfer-Encoding", "chunked")
+				h.Replace("Transfer-Encoding", "chunked")
 				h.Replace("Content-Type", "text/plain")
-				h.Set("Trailer", "X-Content-SHA256")
+				h.Set("Trailer", "X-Content-Sha256")
 				h.Set("Trailer", "X-Content-Length")
 				w.WriteHeaders(h)
 
-				fullBody := []byte{}
+				// next write the body in chunked segements
+				fullBody := make([]byte, 0)
+				maxChunkSize := 1024
+
 				for {
-					data := make([]byte, 32)
+					data := make([]byte, maxChunkSize)
 					n, err := resp.Body.Read(data)
+
 					if err != nil {
 						break
 					}
-					fullBody = append(fullBody, data[:n]...)
-					w.WriteChunkedBody(data[:n])
-				}
-				w.WriteChunkedBody([]byte("0\r\n"))
 
+					if n > 0 {
+						fullBody = append(fullBody, data[:n]...)
+						w.WriteChunkedBody(data[:n])
+					}
+
+				}
+				w.WriteChunkedBodyDone()
+
+				// writing trailers
 				trailer := headers.NewHeaders()
-				sha256 := fmt.Sprintf("%02x", sha256.Sum256(fullBody))
+				sha256 := fmt.Sprintf("%x", sha256.Sum256(fullBody))
 				length := fmt.Sprintf("%d", len(fullBody))
-				trailer.Replace("X-Content-SHA256", sha256)
+				trailer.Replace("X-Content-Sha256", sha256)
 				trailer.Replace("X-Content-Length", length)
-				err := w.WriteHeaders(trailer)
+				err := w.WriteTrailers(trailer)
+
 				if err != nil {
 					fmt.Println("Error writing trailers:", err)
 				}
-				//w.WriteChunkedBodyDone()
+
 				return nil
 			}
 		}
