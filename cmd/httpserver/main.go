@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"boot.swampdonkey.dev/internal/request"
@@ -42,6 +44,38 @@ func main() {
 			body = ReadFile("500.html")
 			status = response.ServerErrorResponse
 
+		} else if strings.HasPrefix(req.RequestLine.RequestTarget, "/httpbin/stream") {
+
+			target := req.RequestLine.RequestTarget
+			url := "https://httpbingo.org/" + target[len("/httpbin/"):]
+			resp, err := http.Get(url)
+
+			if err != nil {
+				body = ReadFile("500.html")
+				status = response.ServerErrorResponse
+			} else {
+
+				w.WriteStatusLine(response.SuccessResponse)
+
+				h.Delete("Content-Length")
+				h.Set("Transfer-Encoding", "chunked")
+				h.Replace("Content-Type", "text/plain")
+				w.WriteHeaders(h)
+
+				for {
+					data := make([]byte, 32)
+					n, err := resp.Body.Read(data)
+					if err != nil {
+						break
+					}
+					// start by writing hex
+					w.WriteBody([]byte(fmt.Sprintf("%x\r\n", n)))
+					w.WriteBody(data[:n])
+					w.WriteBody([]byte("\r\n"))
+				}
+				w.WriteBody([]byte("0\r\n\r\n"))
+				return nil
+			}
 		}
 
 		w.WriteStatusLine(status)

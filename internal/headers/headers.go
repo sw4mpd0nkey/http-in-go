@@ -73,6 +73,11 @@ func (h Headers) Replace(key, value string) {
 	h[key] = value
 }
 
+func (h Headers) Delete(name string) {
+	name = strings.ToLower(name)
+	delete(h, name)
+}
+
 var tokenChars = []byte{'!', '#', '$', '%', '&', '\'', '*', '+', '-', '.', '^', '_', '`', '|', '~'}
 
 // validTokens checks if the data contains only valid tokens
