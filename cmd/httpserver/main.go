@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"strings"
 	"syscall"
 
+	"boot.swampdonkey.dev/internal/headers"
 	"boot.swampdonkey.dev/internal/request"
 	"boot.swampdonkey.dev/internal/response"
 	"boot.swampdonkey.dev/internal/server"
@@ -44,7 +46,7 @@ func main() {
 			body = ReadFile("500.html")
 			status = response.ServerErrorResponse
 
-		} else if strings.HasPrefix(req.RequestLine.RequestTarget, "/httpbin/stream") {
+		} else if strings.HasPrefix(req.RequestLine.RequestTarget, "/httpbin/") {
 
 			target := req.RequestLine.RequestTarget
 			url := "https://httpbingo.org/" + target[len("/httpbin/"):]
@@ -60,17 +62,32 @@ func main() {
 				h.Delete("Content-Length")
 				h.Set("Transfer-Encoding", "chunked")
 				h.Replace("Content-Type", "text/plain")
+				h.Set("Trailer", "X-Content-SHA256")
+				h.Set("Trailer", "X-Content-Length")
 				w.WriteHeaders(h)
 
+				fullBody := []byte{}
 				for {
 					data := make([]byte, 32)
 					n, err := resp.Body.Read(data)
 					if err != nil {
 						break
 					}
+					fullBody = append(fullBody, data[:n]...)
 					w.WriteChunkedBody(data[:n])
 				}
-				w.WriteChunkedBodyDone()
+				w.WriteChunkedBody([]byte("0\r\n"))
+
+				trailer := headers.NewHeaders()
+				sha256 := fmt.Sprintf("%02x", sha256.Sum256(fullBody))
+				length := fmt.Sprintf("%d", len(fullBody))
+				trailer.Replace("X-Content-SHA256", sha256)
+				trailer.Replace("X-Content-Length", length)
+				err := w.WriteHeaders(trailer)
+				if err != nil {
+					fmt.Println("Error writing trailers:", err)
+				}
+				//w.WriteChunkedBodyDone()
 				return nil
 			}
 		}
