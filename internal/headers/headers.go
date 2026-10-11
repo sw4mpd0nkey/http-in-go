@@ -65,7 +65,7 @@ func (h Headers) Set(key, value string) {
 			value,
 		}, ", ")
 	}
-
+	h[key] = value
 }
 
 func (h Headers) Replace(key, value string) {
